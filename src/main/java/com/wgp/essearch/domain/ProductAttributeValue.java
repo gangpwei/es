@@ -9,7 +9,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
  * @author : gangpeng.wgp
  * @date : 2023/6/18
  */
-public class EsProductAttributeValue implements Serializable {
+public class ProductAttributeValue implements Serializable {
     private static final long serialVersionUID = 1L;
     private Long id;
     private Long productAttributeId;

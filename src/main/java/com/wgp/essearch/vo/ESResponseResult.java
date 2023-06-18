@@ -4,7 +4,8 @@ package com.wgp.essearch.vo;
 import java.util.List;
 import java.util.Objects;
 
-import com.wgp.essearch.domain.EsProduct;
+import com.wgp.essearch.domain.Product;
+import lombok.Data;
 
 /**
  * @author : gangpeng.wgp
@@ -15,7 +16,7 @@ public class ESResponseResult {
     /**
      * 查询到的所有商品信息
      */
-    private List<EsProduct> products;
+    private List<Product> products;
 
 
     /**
@@ -50,11 +51,11 @@ public class ESResponseResult {
      */
     private List<categoryVo> categorys;
 
-    public List<EsProduct> getProducts() {
+    public List<Product> getProducts() {
         return products;
     }
 
-    public void setProducts(List<EsProduct> products) {
+    public void setProducts(List<Product> products) {
         this.products = products;
     }
 
@@ -197,10 +198,20 @@ public class ESResponseResult {
         public int hashCode() {
             return Objects.hash(brandId, brandName, brandImg);
         }
+
+        @Override
+        public String toString() {
+            return "BrandVo{" +
+                "brandId=" + brandId +
+                ", brandName='" + brandName + '\'' +
+                ", brandImg='" + brandImg + '\'' +
+                '}';
+        }
     }
 
 
 
+    @Data
     public static class AttrVo {
 
         private Long attrId;
@@ -209,28 +220,13 @@ public class ESResponseResult {
 
         private List<String> attrValue;
 
-        public Long getAttrId() {
-            return attrId;
-        }
-
-        public void setAttrId(Long attrId) {
-            this.attrId = attrId;
-        }
-
-        public String getAttrName() {
-            return attrName;
-        }
-
-        public void setAttrName(String attrName) {
-            this.attrName = attrName;
-        }
-
-        public List<String> getAttrValue() {
-            return attrValue;
-        }
-
-        public void setAttrValue(List<String> attrValue) {
-            this.attrValue = attrValue;
+        @Override
+        public String toString() {
+            return "AttrVo{" +
+                "attrId=" + attrId +
+                ", attrName='" + attrName + '\'' +
+                ", attrValue=" + attrValue +
+                '}';
         }
     }
 

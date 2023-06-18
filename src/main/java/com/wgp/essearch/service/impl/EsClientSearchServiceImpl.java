@@ -51,8 +51,8 @@ import com.wgp.essearch.service.EsClientSearchService;
  * @author : gangpeng.wgp
  * @date : 2023/6/18
  */
-@Service(value = "esSearchService")
-public class EsClientClientSearchServiceImpl implements EsClientSearchService {
+@Service
+public class EsClientSearchServiceImpl implements EsClientSearchService {
 
     @Qualifier("restHighLevelClient")
     @Autowired
@@ -70,8 +70,7 @@ public class EsClientClientSearchServiceImpl implements EsClientSearchService {
     @Override
     public boolean isExit(String index) throws IOException {
         GetIndexRequest request = new GetIndexRequest(index);
-        boolean exists = client.indices().exists(request, RequestOptions.DEFAULT);
-        return exists;
+        return client.indices().exists(request, RequestOptions.DEFAULT);
     }
 
     @Override
@@ -92,7 +91,7 @@ public class EsClientClientSearchServiceImpl implements EsClientSearchService {
         request.source(JSON.toJSONString(object), XContentType.JSON);
         //客户端发送请求,获取相应的结果
         IndexResponse response = client.index(request, RequestOptions.DEFAULT);
-        return response.getShardInfo().getSuccessful() > 0 ? true : false;
+        return response.getShardInfo().getSuccessful() > 0;
     }
 
     @Override
@@ -105,7 +104,7 @@ public class EsClientClientSearchServiceImpl implements EsClientSearchService {
     }
 
     @Override
-    public String getDoucumment(String index, String id) throws IOException {
+    public String getDocument(String index, String id) throws IOException {
         GetRequest getRequest = new GetRequest(index, id);
         GetResponse response = client.get(getRequest, RequestOptions.DEFAULT);
         return response.getSourceAsString();
@@ -118,7 +117,7 @@ public class EsClientClientSearchServiceImpl implements EsClientSearchService {
 
         request.doc(JSON.toJSONString(object), XContentType.JSON);
         UpdateResponse update = client.update(request, RequestOptions.DEFAULT);
-        return update.getShardInfo().getSuccessful() > 0 ? true : false;
+        return update.getShardInfo().getSuccessful() > 0;
     }
 
     @Override
@@ -126,7 +125,7 @@ public class EsClientClientSearchServiceImpl implements EsClientSearchService {
         DeleteRequest request = new DeleteRequest(index, id);
         request.timeout("1s");
         DeleteResponse deleteResponse = client.delete(request, RequestOptions.DEFAULT);
-        return deleteResponse.getShardInfo().getSuccessful() > 0 ? true : false;
+        return deleteResponse.getShardInfo().getSuccessful() > 0;
     }
 
     @Override
@@ -142,7 +141,7 @@ public class EsClientClientSearchServiceImpl implements EsClientSearchService {
         }
         BulkResponse responses = client.bulk(bulkRequest, RequestOptions.DEFAULT);
         //是否失败 false-没有失败
-        return responses.hasFailures() ? false : true;
+        return !responses.hasFailures();
     }
 
     @Override
@@ -177,8 +176,6 @@ public class EsClientClientSearchServiceImpl implements EsClientSearchService {
 
         return getHighLightResult(content, ishigh, searchResponse);
     }
-
-
 
     @Override
     public List<Map<String, Object>> matchQuery(String index, TreeMap<String, Object> content, int size, int from, boolean ishigh) throws IOException {

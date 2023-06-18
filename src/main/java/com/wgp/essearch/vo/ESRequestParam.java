@@ -1,14 +1,15 @@
 package com.wgp.essearch.vo;
 
-
-
 import java.util.Date;
 import java.util.List;
+
+import lombok.Data;
 
 /**
  * @author : gangpeng.wgp
  * @date : 2023/6/18
  */
+@Data
 public class ESRequestParam {
 
     /**
@@ -31,7 +32,7 @@ public class ESRequestParam {
      */
     private String sort;
 
-    private Long salecount;//销量
+    private Long saleCount;//销量
 
     private Date putawayDate;//上架时间
     /**
@@ -42,7 +43,9 @@ public class ESRequestParam {
     /**
      * 价格区间查询
      */
-    private String price;
+    private Integer priceMin;
+
+    private Integer priceMax;
 
     /**
      * 按照属性进行筛选
@@ -59,91 +62,4 @@ public class ESRequestParam {
      */
     private String queryString;
 
-    public String getKeyword() {
-        return keyword;
-    }
-
-    public void setKeyword(String keyword) {
-        this.keyword = keyword;
-    }
-
-    public List<Long> getBrandId() {
-        return brandId;
-    }
-
-    public void setBrandId(List<Long> brandId) {
-        this.brandId = brandId;
-    }
-
-    public String getSort() {
-        return sort;
-    }
-
-    public void setSort(String sort) {
-        this.sort = sort;
-    }
-
-    public Integer getHasStock() {
-        return hasStock;
-    }
-
-    public void setHasStock(Integer hasStock) {
-        this.hasStock = hasStock;
-    }
-
-    public String getPrice() {
-        return price;
-    }
-
-    public void setPrice(String price) {
-        this.price = price;
-    }
-
-    public List<String> getAttrs() {
-        return attrs;
-    }
-
-    public void setAttrs(List<String> attrs) {
-        this.attrs = attrs;
-    }
-
-    public Integer getPageNum() {
-        return pageNum;
-    }
-
-    public void setPageNum(Integer pageNum) {
-        this.pageNum = pageNum;
-    }
-
-    public String getQueryString() {
-        return queryString;
-    }
-
-    public void setQueryString(String queryString) {
-        this.queryString = queryString;
-    }
-
-    public Long getCategoryId() {
-        return categoryId;
-    }
-
-    public void setCategoryId(Long categoryId) {
-        this.categoryId = categoryId;
-    }
-
-    public Long getSalecount() {
-        return salecount;
-    }
-
-    public void setSalecount(Long salecount) {
-        this.salecount = salecount;
-    }
-
-    public Date getPutawayDate() {
-        return putawayDate;
-    }
-
-    public void setPutawayDate(Date putawayDate) {
-        this.putawayDate = putawayDate;
-    }
 }

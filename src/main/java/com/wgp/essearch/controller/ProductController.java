@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.wgp.essearch.domain.User;
 
 @RestController
-public class EsClientProductController {
+public class ProductController {
 
     @Autowired
     private EsClientSearchService esClientSearchService;
@@ -66,7 +66,7 @@ public class EsClientProductController {
     //根据id获取文档
     @GetMapping("/getDoucumment")
     public String getDoucumment(String index, String id) throws IOException {
-        return esClientSearchService.getDoucumment("es_test_index", "1");
+        return esClientSearchService.getDocument("es_test_index", "1");
     }
 
 

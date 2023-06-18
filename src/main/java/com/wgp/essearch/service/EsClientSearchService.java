@@ -57,7 +57,7 @@ public interface EsClientSearchService {
      * @return 返回的是形如{"age":12,"name":"zhan"}的字符串
      * @throws IOException
      */
-    String getDoucumment(String index, String id) throws IOException;
+    String getDocument(String index, String id) throws IOException;
 
     /**
      * 更新文档信息

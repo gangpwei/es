@@ -7,7 +7,7 @@ import com.wgp.essearch.vo.ESResponseResult;
  * @author : gangpeng.wgp
  * @date : 2023/6/18
  */
-public interface TulingMallSearchService {
+public interface MallSearchService {
 
 
     /**

@@ -2,15 +2,19 @@ package com.wgp.essearch.service.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.alibaba.fastjson.JSON;
 
-import com.wgp.essearch.domain.EsProduct;
-import com.wgp.essearch.service.TulingMallSearchService;
+import com.wgp.essearch.domain.Product;
+import com.wgp.essearch.service.MallSearchService;
 import com.wgp.essearch.utils.SearchConstant;
 import com.wgp.essearch.vo.ESRequestParam;
 import com.wgp.essearch.vo.ESResponseResult;
+import com.wgp.essearch.vo.ESResponseResult.AttrVo;
+import com.wgp.essearch.vo.ESResponseResult.BrandVo;
+import com.wgp.essearch.vo.ESResponseResult.categoryVo;
 import org.apache.lucene.search.join.ScoreMode;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -35,21 +39,20 @@ import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 /**
  * @author : gangpeng.wgp
  * @date : 2023/6/18
  */
-@Service(value = "tulingMallSearchService")
-public class TulingMallSearchServiceImpl implements TulingMallSearchService {
+//@Service
+public class MallSearchServiceImpl implements MallSearchService {
 
     @Qualifier("restHighLevelClient")
     @Autowired
     private RestHighLevelClient client;
 
-    /**************************图灵商城搜索*****************************/
+
     @Override
     public ESResponseResult search(ESRequestParam param) {
 
@@ -126,29 +129,10 @@ public class TulingMallSearchServiceImpl implements TulingMallSearchService {
         }
 
         //6、根据价格过滤
-        if (!StringUtils.isEmpty(param.getPrice())) {
-            //价格的输入形式为：10_100（起始价格和最终价格）或_100（不指定起始价格）或10_（不限制最终价格）
+        if (Objects.nonNull(param.getPriceMax()) && Objects.nonNull(param.getPriceMin())) {
             RangeQueryBuilder rangeQueryBuilder = QueryBuilders.rangeQuery("price");
-            String[] price = param.getPrice().split("_");
-            if (price.length == 2) {
-                //price: _5000
-                if (param.getPrice().startsWith("_")) {
-                    rangeQueryBuilder.lte(price[1]);
-                } else {
-                    //price: 1_5000
-                    rangeQueryBuilder.gte(price[0]).lte(price[1]);
-                }
-
-            } else if (price.length == 1) {
-                //price: 1_
-                if (param.getPrice().endsWith("_")) {
-                    rangeQueryBuilder.gte(price[0]);
-                }
-                //price: _5000
-                if (param.getPrice().startsWith("_")) {
-                    rangeQueryBuilder.lte(price[0]);
-                }
-            }
+            rangeQueryBuilder.gte(param.getPriceMin());
+            rangeQueryBuilder.lte(param.getPriceMax());
             boolQueryBuilder.filter(rangeQueryBuilder);
         }
 
@@ -232,83 +216,50 @@ public class TulingMallSearchServiceImpl implements TulingMallSearchService {
 
         ESResponseResult result = new ESResponseResult();
 
-        //1、获取查询到的商品信息
         SearchHits hits = response.getHits();
 
-        List<EsProduct> esModels = new ArrayList<>();
-        //2、遍历所有商品信息
-        if (hits.getHits() != null && hits.getHits().length > 0) {
-            for (SearchHit hit : hits.getHits()) {
-                String sourceAsString = hit.getSourceAsString();
-                EsProduct esModel = JSON.parseObject(sourceAsString, EsProduct.class);
+        //1、获取查询到的商品信息
+        setResultList(param, result, hits);
 
-                //2.1 判断是否按关键字检索，若是就显示高亮，否则不显示
-                if (!StringUtils.isEmpty(param.getKeyword())) {
-                    //2.2 拿到高亮信息显示标题
-                    HighlightField name = hit.getHighlightFields().get("name");
-                    //2.3 判断name中是否含有查询的关键字(因为是多字段查询，因此可能不包含指定的关键字，假设不包含则显示原始name字段的信息)
-                    String nameValue = name != null ? name.getFragments()[0].string() : esModel.getName();
-                    esModel.setName(nameValue);
-                }
-                esModels.add(esModel);
-            }
-        }
-        result.setProducts(esModels);
-
-        //3、当前商品涉及到的所有品牌信息，小米手机和小米电脑都属于小米品牌，过滤重复品牌信息
-        List<ESResponseResult.BrandVo> brandVos = new ArrayList<>();
-        //获取到品牌的聚合
-        ParsedLongTerms brandAgg = response.getAggregations().get("brand_agg");
-        for (Terms.Bucket bucket : brandAgg.getBuckets()) {
-            ESResponseResult.BrandVo brandVo = new ESResponseResult.BrandVo();
-
-            //获取品牌的id
-            long brandId = bucket.getKeyAsNumber().longValue();
-            brandVo.setBrandId(brandId);
-
-            //获取品牌的名字
-            ParsedStringTerms brandNameAgg = bucket.getAggregations().get("brand_name_agg");
-            String brandName = brandNameAgg.getBuckets().get(0).getKeyAsString();
-            brandVo.setBrandName(brandName);
-
-            //获取品牌的LOGO
-            ParsedStringTerms brandImgAgg = bucket.getAggregations().get("brand_img_agg");
-            String brandImg = brandImgAgg.getBuckets().get(0).getKeyAsString();
-            brandVo.setBrandImg(brandImg);
-            System.out.println("brandId:" + brandId + "brandName:" + brandName + "brandImg");
-            brandVos.add(brandVo);
-        }
-        System.out.println("brandVos.size:" + brandVos.size());
-        result.setBrands(brandVos);
+        setBrands(response, result);
 
         //4、当前商品相关的所有类目信息
-        //获取到分类的聚合
-        List<ESResponseResult.categoryVo> categoryVos = new ArrayList<>();
-
-        ParsedLongTerms categoryAgg = response.getAggregations().get("category_agg");
-
-        for (Terms.Bucket bucket : categoryAgg.getBuckets()) {
-            ESResponseResult.categoryVo categoryVo = new ESResponseResult.categoryVo();
-            //获取分类id
-            String keyAsString = bucket.getKeyAsString();
-            categoryVo.setCategoryId(Long.parseLong(keyAsString));
-
-            //获取分类名
-            ParsedStringTerms categoryNameAgg = bucket.getAggregations().get("category_name_agg");
-            String categoryName = categoryNameAgg.getBuckets().get(0).getKeyAsString();
-            categoryVo.setCategoryName(categoryName);
-            categoryVos.add(categoryVo);
-        }
-
-        result.setCategorys(categoryVos);
+        setCategory(response, result);
 
         //5、获取商品相关的所有属性信息
-        List<ESResponseResult.AttrVo> attrVos = new ArrayList<>();
+        setAttrs(response, result);
+
+        //6、进行分页操作
+        setPageInfo(param, result, hits);
+
+        return result;
+    }
+
+    private void setPageInfo(ESRequestParam param, ESResponseResult result, SearchHits hits) {
+        result.setPageNum(param.getPageNum());
+        //获取总记录数
+        long total = hits.getTotalHits().value;
+        result.setTotal(total);
+
+        //计算总页码
+        int totalPages = (int)total % SearchConstant.PAGE_SIZE == 0 ?
+            (int)total / SearchConstant.PAGE_SIZE : ((int)total / SearchConstant.PAGE_SIZE + 1);
+        result.setTotalPages(totalPages);
+
+        List<Integer> pageNavs = new ArrayList<>();
+        for (int i = 1; i <= totalPages; i++) {
+            pageNavs.add(i);
+        }
+        result.setPageNavs(pageNavs);
+    }
+
+    private void setAttrs(SearchResponse response, ESResponseResult result) {
+        List<AttrVo> attrVos = new ArrayList<>();
         //获取属性信息的聚合
         ParsedNested attrsAgg = response.getAggregations().get("attr_agg");
         ParsedLongTerms attrIdAgg = attrsAgg.getAggregations().get("attr_id_agg");
         for (Terms.Bucket bucket : attrIdAgg.getBuckets()) {
-            ESResponseResult.AttrVo attrVo = new ESResponseResult.AttrVo();
+            AttrVo attrVo = new AttrVo();
             //获取属性ID值
             long attrId = bucket.getKeyAsNumber().longValue();
             attrVo.setAttrId(attrId);
@@ -334,25 +285,78 @@ public class TulingMallSearchServiceImpl implements TulingMallSearchService {
         }
 
         result.setAttrs(attrVos);
+    }
 
-        //6、进行分页操作
-        result.setPageNum(param.getPageNum());
-        //获取总记录数
-        long total = hits.getTotalHits().value;
-        result.setTotal(total);
+    private void setCategory(SearchResponse response, ESResponseResult result) {
+        //获取到分类的聚合
+        List<categoryVo> categoryVos = new ArrayList<>();
 
-        //计算总页码
-        int totalPages = (int)total % SearchConstant.PAGE_SIZE == 0 ?
-            (int)total / SearchConstant.PAGE_SIZE : ((int)total / SearchConstant.PAGE_SIZE + 1);
-        result.setTotalPages(totalPages);
+        ParsedLongTerms categoryAgg = response.getAggregations().get("category_agg");
 
-        List<Integer> pageNavs = new ArrayList<>();
-        for (int i = 1; i <= totalPages; i++) {
-            pageNavs.add(i);
+        for (Terms.Bucket bucket : categoryAgg.getBuckets()) {
+            categoryVo categoryVo = new categoryVo();
+            //获取分类id
+            String keyAsString = bucket.getKeyAsString();
+            categoryVo.setCategoryId(Long.parseLong(keyAsString));
+
+            //获取分类名
+            ParsedStringTerms categoryNameAgg = bucket.getAggregations().get("category_name_agg");
+            String categoryName = categoryNameAgg.getBuckets().get(0).getKeyAsString();
+            categoryVo.setCategoryName(categoryName);
+            categoryVos.add(categoryVo);
         }
-        result.setPageNavs(pageNavs);
 
-        return result;
+        result.setCategorys(categoryVos);
+    }
+
+    private void setBrands(SearchResponse response, ESResponseResult result) {
+        //3、当前商品涉及到的所有品牌信息，小米手机和小米电脑都属于小米品牌，过滤重复品牌信息
+        List<BrandVo> brandVos = new ArrayList<>();
+        //获取到品牌的聚合
+        ParsedLongTerms brandAgg = response.getAggregations().get("brand_agg");
+        for (Terms.Bucket bucket : brandAgg.getBuckets()) {
+            BrandVo brandVo = new BrandVo();
+
+            //获取品牌的id
+            long brandId = bucket.getKeyAsNumber().longValue();
+            brandVo.setBrandId(brandId);
+
+            //获取品牌的名字
+            ParsedStringTerms brandNameAgg = bucket.getAggregations().get("brand_name_agg");
+            String brandName = brandNameAgg.getBuckets().get(0).getKeyAsString();
+            brandVo.setBrandName(brandName);
+
+            //获取品牌的LOGO
+            ParsedStringTerms brandImgAgg = bucket.getAggregations().get("brand_img_agg");
+            String brandImg = brandImgAgg.getBuckets().get(0).getKeyAsString();
+            brandVo.setBrandImg(brandImg);
+            System.out.println("brandId:" + brandId + "brandName:" + brandName + "brandImg");
+            brandVos.add(brandVo);
+        }
+        System.out.println("brandVos.size:" + brandVos.size());
+        result.setBrands(brandVos);
+    }
+
+    private void setResultList(ESRequestParam param, ESResponseResult result, SearchHits hits) {
+        List<Product> esModels = new ArrayList<>();
+        //2、遍历所有商品信息
+        if (hits.getHits() != null && hits.getHits().length > 0) {
+            for (SearchHit hit : hits.getHits()) {
+                String sourceAsString = hit.getSourceAsString();
+                Product esModel = JSON.parseObject(sourceAsString, Product.class);
+
+                //2.1 判断是否按关键字检索，若是就显示高亮，否则不显示
+                if (!StringUtils.isEmpty(param.getKeyword())) {
+                    //2.2 拿到高亮信息显示标题
+                    HighlightField name = hit.getHighlightFields().get("name");
+                    //2.3 判断name中是否含有查询的关键字(因为是多字段查询，因此可能不包含指定的关键字，假设不包含则显示原始name字段的信息)
+                    String nameValue = name != null ? name.getFragments()[0].string() : esModel.getName();
+                    esModel.setName(nameValue);
+                }
+                esModels.add(esModel);
+            }
+        }
+        result.setProducts(esModels);
     }
 
 }

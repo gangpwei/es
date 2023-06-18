@@ -6,7 +6,7 @@ import java.util.List;
  * @author : gangpeng.wgp
  * @date : 2023/6/18
  */
-public class EsProductRelatedInfo {
+public class ProductRelatedInfo {
     private List<String> brandNames;
     private List<String> productCategoryNames;
     private List<ProductAttr>   productAttrs;
